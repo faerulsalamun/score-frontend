@@ -28,11 +28,12 @@ const config = {
 const Home: NextPage = () => {
     const [score, setScore] = useState([]);
     const [isAlreadySubmit, setIsAlreadySubmit] = useState(false);
+    const [isReveal, setIsReveal] = useState(false);
     const MySwal = withReactContent(Swal);
     const {address} = useAccount();
 
     const {data: hash, writeContract} = useWriteContract();
-    const {data: getMatches} = useReadContract({
+    const {data: getMatches, refetch: refetchMatches} = useReadContract({
         address: config['sendUniversalPacket']['optimism'].portAddr,
         abi: abi,
         functionName: 'getMatches',
@@ -54,6 +55,10 @@ const Home: NextPage = () => {
             })
         }
 
+        if (getMatches) {
+            setIsReveal(getMatches[0]?.reveal);
+        }
+
         setScore(old => [...old, ...addScore]);
     }, [getMatches]);
 
@@ -69,7 +74,9 @@ const Home: NextPage = () => {
                     abi: abi,
                     functionName: 'betting',
                     args: [score],
-                })
+                });
+
+                setIsAlreadySubmit(true);
             }
         });
     }
@@ -90,12 +97,19 @@ const Home: NextPage = () => {
     const {isLoading: isConfirming, isSuccess: isConfirmed} =
         useWaitForTransactionReceipt({
             hash,
-    })
+        })
 
     useEffect(() => {
+        const fetchData = async () => {
+            await refetchMatches?.();
+        }
+
         if (isConfirmed) {
             Swal.fire("Success!", "", "success");
         }
+
+        fetchData();
+
     }, [isConfirmed]);
 
     useEffect(() => {
@@ -223,17 +237,13 @@ const Home: NextPage = () => {
                                     <td className="px-6 py-4 dark:text-white text-center" colSpan={4}>
                                         <button
                                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4 mb-4"
-                                            disabled={isAlreadySubmit ||
-                                                getMatches ? getMatches[0]?.reveal : false
-                                            }
+                                            disabled={isAlreadySubmit || isReveal }
                                             onClick={submit}>
                                             Submit
                                         </button>
                                         <button
                                             className="ml-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4 mb-4"
-                                            disabled={isAlreadySubmit ||
-                                                getMatches ? getMatches[0]?.reveal : false
-                                            }
+                                            disabled={isReveal }
                                             onClick={reveal}>
                                             Reveal
                                         </button>
